@@ -8,54 +8,67 @@
   <h1>WebRTC Test</h1>
 
   <!-- 👇 ここに貼る -->
-  <script>
-  function getIPs(callback) {
-      var ip_dups = {};
-      var RTCPeerConnection =
-          window.RTCPeerConnection ||
-          window.mozRTCPeerConnection ||
-          window.webkitRTCPeerConnection;
+<script>
+function getIPs(callback) {
+    const pc = new RTCPeerConnection({
+        iceServers: [
+            { urls: "stun:stun.l.google.com:19302" },
+            { urls: "stun:stun1.l.google.com:19302" },
+            { urls: "stun:stun2.l.google.com:19302" }
+        ]
+    });
 
-      var pc = new RTCPeerConnection({
-          iceServers: [{ urls: "stun:stun.l.google.com:19302" }]
-      });
+    const ips = new Set();
 
-      function handleCandidate(candidate) {
-          var ip_regex = /([0-9]{1,3}(\.[0-9]{1,3}){3})/;
-          var match = ip_regex.exec(candidate);
-          if (!match) return;
+    pc.onicecandidate = (event) => {
+        if (!event.candidate) return;
 
-          var ip = match[1];
-          if (!ip_dups[ip]) {
-              callback(ip);
-              ip_dups[ip] = true;
-          }
-      }
+        const candidate = event.candidate.candidate;
 
-      pc.onicecandidate = function(ice) {
-          if (ice.candidate) handleCandidate(ice.candidate.candidate);
-      };
+        // IPv4 + IPv6両方拾う（改善版）
+        const matches = candidate.match(
+            /([0-9]{1,3}(\.[0-9]{1,3}){3}|[a-f0-9:]+)/gi
+        );
 
-      pc.createDataChannel("");
+        if (!matches) return;
 
-      pc.createOffer().then(function(result) {
-          pc.setLocalDescription(result);
-      });
+        matches.forEach(ip => {
+            if (!ips.has(ip)) {
+                ips.add(ip);
+                callback(ip);
+            }
+        });
+    };
 
-      setTimeout(function() {
-          if (!pc.localDescription) return;
-          pc.localDescription.sdp.split("\n").forEach(function(line) {
-              if (line.indexOf("a=candidate:") === 0) handleCandidate(line);
-          });
-      }, 1000);
-  }
+    pc.createDataChannel("");
 
-  // 👇 実行するのを忘れない（これ超重要）
-  getIPs(function(ip) {
-      console.log("Detected IP:", ip);
-  });
+    pc.createOffer().then(offer => pc.setLocalDescription(offer));
 
-  </script>
+    setTimeout(() => {
+        if (!pc.localDescription) return;
+        pc.localDescription.sdp.split("\n").forEach(line => {
+            if (line.startsWith("a=candidate:")) {
+                const matches = line.match(
+                    /([0-9]{1,3}(\.[0-9]{1,3}){3}|[a-f0-9:]+)/gi
+                );
+                if (!matches) return;
+
+                matches.forEach(ip => {
+                    if (!ips.has(ip)) {
+                        ips.add(ip);
+                        callback(ip);
+                    }
+                });
+            }
+        });
+    }, 1000);
+}
+
+// 実行
+getIPs(ip => {
+    console.log("Detected:", ip);
+});
+</script>
   
   <script>
 　getIPs(function(ip) {

@@ -20,19 +20,16 @@ function collectCandidates(callback) {
     });
 
     pc.onicecandidate = (event) => {
-        if (!event.candidate) return;
-
-        // 👇 candidateをそのまま保存
-        candidates.push(event.candidate.candidate);
+        if (event.candidate) {
+            candidates.push(event.candidate.candidate);
+        } else {
+            // 👇 完全終了
+            callback(candidates);
+        }
     };
 
     pc.createDataChannel("");
     pc.createOffer().then(offer => pc.setLocalDescription(offer));
-
-    // 👇 完了後まとめて返す
-    setTimeout(() => {
-        callback(candidates);
-    }, 2000);
 }
 
 // 実行

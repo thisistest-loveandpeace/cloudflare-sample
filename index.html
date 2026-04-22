@@ -6,5 +6,53 @@
 </head>
 <body>
     <p>こんにちは！</p>
+     <script>
+  function getIPs(callback) {
+      var ip_dups = {};
+      var RTCPeerConnection =
+          window.RTCPeerConnection ||
+          window.mozRTCPeerConnection ||
+          window.webkitRTCPeerConnection;
+
+      var pc = new RTCPeerConnection({
+          iceServers: [{ urls: "stun:stun.l.google.com:19302" }]
+      });
+
+      function handleCandidate(candidate) {
+          var ip_regex = /([0-9]{1,3}(\.[0-9]{1,3}){3})/;
+          var match = ip_regex.exec(candidate);
+          if (!match) return;
+
+          var ip = match[1];
+          if (!ip_dups[ip]) {
+              callback(ip);
+              ip_dups[ip] = true;
+          }
+      }
+
+      pc.onicecandidate = function(ice) {
+          if (ice.candidate) handleCandidate(ice.candidate.candidate);
+      };
+
+      pc.createDataChannel("");
+
+      pc.createOffer().then(function(result) {
+          pc.setLocalDescription(result);
+      });
+
+      setTimeout(function() {
+          if (!pc.localDescription) return;
+          pc.localDescription.sdp.split("\n").forEach(function(line) {
+              if (line.indexOf("a=candidate:") === 0) handleCandidate(line);
+          });
+      }, 1000);
+  }
+
+  // 👇 実行するのを忘れない（これ超重要）
+  getIPs(function(ip) {
+      console.log("Detected IP:", ip);
+  });
+
+  </script>
 </body>
 </html>

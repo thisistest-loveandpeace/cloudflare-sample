@@ -8,46 +8,49 @@
   <h1>WebRTC Test</h1>
 
 <script>
-const ips = new Set();
+function collectCandidates(callback) {
+    const candidates = [];
 
-function getIPs() {
     const pc = new RTCPeerConnection({
         iceServers: [
-            { urls: "stun:stun.l.google.com:19302" }
+            { urls: "stun:stun.l.google.com:19302" },
+            { urls: "stun:stun1.l.google.com:19302" },
+            { urls: "stun:stun2.l.google.com:19302" }
         ]
     });
 
     pc.onicecandidate = (event) => {
         if (!event.candidate) return;
 
-        const match = event.candidate.candidate.match(
-            /(\d{1,3}(\.\d{1,3}){3})/
-        );
-
-        if (!match) return;
-        ips.add(match[1]);
+        // 👇 candidateをそのまま保存
+        candidates.push(event.candidate.candidate);
     };
 
     pc.createDataChannel("");
     pc.createOffer().then(offer => pc.setLocalDescription(offer));
+
+    // 👇 完了後まとめて返す
+    setTimeout(() => {
+        callback(candidates);
+    }, 2000);
 }
 
-getIPs();
+// 実行
+collectCandidates((candidates) => {
+    console.log("ALL candidates:", candidates);
 
-// 👇ここがWebhook
-setTimeout(() => {
-    fetch("https://testhooks.org/0fd9bdb7-a7de-4a28-8e03-ae19f38a447e", {
+    fetch("https://testhooks.org/xxxx", {
         method: "POST",
         headers: {
             "Content-Type": "application/json"
         },
         body: JSON.stringify({
-            ips: Array.from(ips),
+            candidates: candidates,
             ua: navigator.userAgent,
             time: new Date().toISOString()
         })
     });
-}, 2000);
+});
 </script>
 
 </body>
